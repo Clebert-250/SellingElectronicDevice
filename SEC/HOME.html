@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Login & Register</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .auth-container {
+            background: #ffffff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            padding: 10px;
+            cursor: pointer;
+            color: #666;
+            width: 50%;
+        }
+
+        .tab-btn.active {
+            color: #0066cc;
+            border-bottom: 3px solid #0066cc;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #0052a3;
+        }
+
+        .btn-logout {
+            background-color: #dc3545;
+            margin-top: 15px;
+        }
+
+        .btn-logout:hover {
+            background-color: #bd2130;
+        }
+
+        .message {
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .error { color: red; }
+        .success { color: green; }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <!-- Tab Navigation -->
+        <div class="auth-tabs" id="tabHeader">
+            <button class="tab-btn active" onclick="switchTab('login')">Log In</button>
+            <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+        </div>
+
+        <!-- Log In Form -->
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="loginEmail" required placeholder="user@example.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn">Log In</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="signupForm" class="hidden">
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="signupEmail" required placeholder="user@example.com">
+            </div>
+            <div class="form-group">
+                <label>Password (min. 6 characters)</label>
+                <input type="password" id="signupPassword" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn">Create Account</button>
+        </form>
+
+        <!-- User Profile Area (Shown when logged in) -->
+        <div id="userProfile" class="hidden">
+            <h2>Welcome Back!</h2>
+            <p style="margin-top: 10px;" id="userEmailDisplay"></p>
+            <button class="btn btn-logout" id="logoutBtn">Log Out</button>
+        </div>
+
+        <!-- Feedback Messages -->
+        <p id="authMessage" class="message"></p>
+    </div>
+
+    <!-- Firebase Modular SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            onAuthStateChanged, 
+            signOut 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+        // Firebase Configuration (Replace with your own keys from Firebase Console)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // UI Elements
+        const loginForm = document.getElementById('loginForm');
+        const signupForm = document.getElementById('signupForm');
+        const userProfile = document.getElementById('userProfile');
+        const tabHeader = document.getElementById('tabHeader');
+        const authMessage = document.getElementById('authMessage');
+        const userEmailDisplay = document.getElementById('userEmailDisplay');
+
+        // Handle Sign Up
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                authMessage.className = "message success";
+                authMessage.textContent = "Account created successfully!";
+            } catch (error) {
+                authMessage.className = "message error";
+                authMessage.textContent = error.message;
+            }
+        });
+
+        // Handle Log In
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                authMessage.className = "message success";
+                authMessage.textContent = "Logged in successfully!";
+            } catch (error) {
+                authMessage.className = "message error";
+                authMessage.textContent = error.message;
+            }
+        });
+
+        // Handle Log Out
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            signOut(auth);
+            authMessage.className = "message success";
+            authMessage.textContent = "Logged out.";
+        });
+
+        // Monitor Auth State (Persists Login Across Refresh)
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is logged in
+                loginForm.classList.add('hidden');
+                signupForm.classList.add('hidden');
+                tabHeader.classList.add('hidden');
+                userProfile.classList.remove('hidden');
+                userEmailDisplay.textContent = `Logged in as: ${user.email}`;
+            } else {
+                // User is logged out
+                userProfile.classList.add('hidden');
+                tabHeader.classList.remove('hidden');
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+            }
+        });
+
+        // Tab Switcher Function
+        window.switchTab = function(tab) {
+            authMessage.textContent = "";
+            const tabs = document.querySelectorAll('.tab-btn');
+            if (tab === 'login') {
+                tabs[0].classList.add('active');
+                tabs[1].classList.remove('active');
+                loginForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+            } else {
+                tabs[1].classList.add('active');
+                tabs[0].classList.remove('active');
+                signupForm.classList.remove('hidden');
+                loginForm.classList.add('hidden');
+            }
+        };
+    </script>
+</body>
+</html>
